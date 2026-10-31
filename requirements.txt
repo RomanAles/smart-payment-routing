@@ -1,0 +1,2 @@
+PyYAML>=6.0,<7
+XlsxWriter>=3.2,<4

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smart-payment-routing"
+version = "1.0.0"
+description = "Payment routing with hard constraints, weighted strategies and SQLite analytics"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6.0,<7", "XlsxWriter>=3.2,<4"]
+
+[project.scripts]
+payment-routing = "payment_routing.cli:main"
+
+[tool.setuptools]
+packages = ["payment_routing"]

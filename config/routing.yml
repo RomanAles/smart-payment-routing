@@ -1,0 +1,26 @@
+data:
+  providers_file: data/providers.json
+  operations_history_file: data/operations_history.csv
+  operations_queue_file: data/operations_queue_90.json
+  business_parameters_file: config/business_parameters.yml
+
+strategies_file: config/strategies.yml
+
+# Ключи стратегий, активных в Router прямо сейчас 
+# 1 ключ -> solo-веса, 2+ -> combo-веса 
+
+active_strategies:
+  - range_fit
+  - conversion
+  - intensity
+  - turnover
+
+# Все активные провайдеры
+
+rated_providers:
+  - vipay
+  - payflow
+  - quickpay
+
+# self-provider: резервный вариант, когда rated_providers пуст после hard-constraints или все они технически недоступны в момент обращения.
+fallback_provider: spacepayments
