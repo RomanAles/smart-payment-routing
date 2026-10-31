@@ -1,0 +1,64 @@
+module PaymentRouting
+  module Router
+    # Обновляет параметры выбранного провайдера сразу после решения по одной операции
+    class MetricsUpdater
+      def start_attempt(state:, provider:, operation:)
+        current = state.provider(provider.payment_system)
+        state.record_request(provider.payment_system)
+        state.replace_provider(current.with(
+          in_progress_count: current.in_progress_count.to_i + 1,
+          in_progress_amount: current.in_progress_amount.to_f + operation.amount
+        ))
+      end
+
+      def finish_attempt(state:, provider:, operation:)
+        current = state.provider(provider.payment_system)
+        state.replace_provider(current.with(
+          in_progress_count: current.in_progress_count - 1,
+          in_progress_amount: current.in_progress_amount - operation.amount
+        ))
+      end
+
+      def apply(state:, provider:, operation:, simulated_result:, rated_payment_systems:)
+        state.replace_provider(updated_provider(state.provider(provider.payment_system), operation, simulated_result))
+        state.replace_actuals(provider.payment_system, updated_actuals(state.actuals(provider.payment_system), operation, simulated_result))
+        recalculate_shares!(state) if approved?(simulated_result)
+      end
+
+      private
+
+      def updated_provider(provider, operation, simulated_result)
+        overrides = {}
+        overrides[:daily_approved_amount] = provider.daily_approved_amount + operation.amount if approved?(simulated_result)
+        provider.with(**overrides)
+      end
+
+      def updated_actuals(actuals, operation, simulated_result)
+        return actuals unless approved?(simulated_result)
+
+        actuals.with(
+          turnover_actual: actuals.turnover_actual + operation.amount,
+          count_actual: actuals.count_actual + 1,
+          volume_actual: actuals.volume_actual + operation.amount
+        )
+      end
+
+      def recalculate_shares!(state)
+        actuals_by_name = state.actuals_by_provider
+        total_count = actuals_by_name.values.sum(&:count_actual)
+        total_volume = actuals_by_name.values.sum(&:volume_actual)
+
+        actuals_by_name.each do |name, actuals|
+          state.replace_actuals(name, actuals.with(
+            count_share_actual: MathUtils.percentage_of(actuals.count_actual, total_count),
+            volume_share_actual: MathUtils.percentage_of(actuals.volume_actual, total_volume)
+          ))
+        end
+      end
+
+      def approved?(simulated_result)
+        simulated_result == OutcomeSimulator::APPROVED
+      end
+    end
+  end
+end
